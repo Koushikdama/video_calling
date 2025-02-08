@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Video Call with Screen Share</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        video {
+            width: 300px;
+            margin: 10px;
+            border-radius: 10px;
+            background: black;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        #userList {
+            margin-top: 20px;
+        }
+        .user {
+            padding: 5px;
+        }
+        #toggleControlsBtn {
+            margin-top: 20px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        #screenShareVideo{
+            height:500px;
+            width:500px
+        }
+        #remoteVideos {
+            display: flex;
+            overflow-x: auto;
+            padding: 10px;
+            gap: 10px;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <h2>WebRTC Video Call with Screen Share</h2>
+
+    <video id="localVideo" autoplay playsinline muted></video>
+    <video id="screenShareVideo" autoplay playsinline style="display:none;"></video>
+    
+    <div id="remoteVideos"></div>
+
+    <div id="controls">
+        <button onclick="toggleMic()"><img src="./assets/mic.png" style="height:25px; widht:25px;" id="mic_control"> Mic</button>
+        <button onclick="toggleVideo()"><img src="./assets/video.png" style="height:25px;width:25px;" id="video_control">Video</button>
+        <button id="screenShareBtn" onclick="toggleScreenShare()"><img src="./assets/screen.png" style="height:20px;width:20px;">  Share Screen</button>
+        <button id="stopScreenShareBtn" onclick="stopScreenShare()" style="display: none;"><img src="./assets/stop.png" style="height:20px;width:20px;"> Stop Sharing</button>
+        <button onclick="createCall()"><img src="./assets/video.png" style="height:20px;width:20px;"> Create Call</button>
+        <button onclick="joinCall()"><img src="./assets/team.png" style="height:20px;width:20px;"> Join Call</button>
+        <button onclick="hangUp()"><img src="./assets/hang-up.png" style="height:20px;width:20px;"> Hang Up</button>
+    </div>
+
+    <button id="toggleControlsBtn" onclick="toggleControls()">🔽 Show/Hide Controls</button>
+
+    <div id="userList">
+        <h3>Participants</h3>
+        <ul id="userListItems"></ul>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhwrrTz7hu1kpiZOUGGDRmrX-kBRKP6eI",
+            authDomain: "audiovideo-70863.firebaseapp.com",
+            projectId: "audiovideo-70863",
+            storageBucket: "audiovideo-70863.appspot.com",
+            messagingSenderId: "173102596800",
+            appId: "1:173102596800:web:e664cbd1cb8b7e8656e325"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+        let localStream, screenStream, peerConnections = {};
+        let isHost = false;
+        let callDocId = null;
+        let isSharingScreen = false;
+        const localVideo = document.getElementById("localVideo");
+        const screenShareVideo = document.getElementById("screenShareVideo");
+        const remoteVideos = document.getElementById("remoteVideos");
+        const userListItems = document.getElementById("userListItems");
+        const screenShareBtn = document.getElementById("screenShareBtn");
+        const stopScreenShareBtn = document.getElementById("stopScreenShareBtn");
+        let controlsVisible = true;
+        var micro_phone = document.getElementById('mic_control');
+        var video_access = document.getElementById('video_control');
+      
+              
+        async function startStream() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+            } catch (error) {
+                alert("Camera & Mic access required!");
+                console.error("Media error:", error);
+            }
+        }
+
+        startStream();
+
+        function addRemoteVideo(peerId) {
+            let existingVideo = document.getElementById(peerId);
+            if (existingVideo) return existingVideo;
+
+            let video = document.createElement("video");
+            video.id = peerId;
+            video.autoplay = true;
+            video.playsinline = true;
+
+
+
+// Add event listener for double click (expand to 500x500)
+video.addEventListener("dblclick", () => {
+    video.style.width = "500px";
+    video.style.height = "500px";
+});
+
+// Add event listener for single click (restore size)
+video.addEventListener("click", () => {
+    video.style.width = "200px";
+    video.style.height = "200px";
+});
+
+
+
+
+
+
+
+            remoteVideos.appendChild(video);
+            return video;
+        }
+
+        function toggleMic() {
+            let track = localStream.getAudioTracks()[0];
+            track.enabled = !track.enabled;
+            console.log("Mic enabled:", track.enabled);
+            if(track.enabled){
+                console.log("true")
+                micro_phone.src = './assets/mic.png';
+            }
+            else{
+              // Change the src attribute to a new image URL
+              micro_phone.src = './assets/microphone.png';
+        }
+        }
+
+        function toggleVideo() {
+            let track = localStream.getVideoTracks()[0];
+            track.enabled = !track.enabled;
+            console.log("Video enabled:", track.enabled);
+            if(track.enabled){
+                video_access.src = "./assets/video.png";
+            }
+            else{
+              // Change the src attribute to a new image URL
+              video_access.src = "./assets/no-video.png";
+        }
+        }
+
+        async function toggleScreenShare() {
+            if (!isSharingScreen) {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    screenShareVideo.srcObject = screenStream;
+                    screenStream.getTracks()[0].onended = stopScreenShare;
+
+                    for (let callId in peerConnections) {
+                        const sender = peerConnections[callId].getSenders().find(s => s.track.kind === "video");
+                        sender.replaceTrack(screenStream.getVideoTracks()[0]);
+                    }
+                    screenShareVideo.style.display='inline-block';
+                    screenShareBtn.style.display = 'none';
+                    stopScreenShareBtn.style.display = 'inline-block';
+                    isSharingScreen = true;
+                } catch (error) {
+                    console.error("Screen sharing error:", error);
+                }
+            } else {
+                stopScreenShare();
+            }
+        }
+
+        function stopScreenShare() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+            }
+            for (let callId in peerConnections) {
+                const sender = peerConnections[callId].getSenders().find(s => s.track.kind === "video");
+                sender.replaceTrack(localStream.getVideoTracks()[0]);
+            }
+
+            screenShareBtn.style.display = 'inline-block';
+            stopScreenShareBtn.style.display = 'none';
+            screenShareVideo.style.display='none';
+            isSharingScreen = false;
+        }
+
+        async function createCall() {
+            const callDoc = db.collection("calls").doc();
+            callDocId = callDoc.id;
+            const offerCandidates = callDoc.collection("offerCandidates");
+
+            alert(`Share this Call ID: ${callDocId}`);
+            isHost = true;
+
+            const peerConnection = new RTCPeerConnection(servers);
+            peerConnections[callDocId] = peerConnection;
+
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    offerCandidates.add({ candidate: event.candidate.toJSON() });
+                }
+            };
+
+            peerConnection.ontrack = event => {
+                let video = addRemoteVideo(callDocId);
+                video.srcObject = event.streams[0];
+            };
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            await callDoc.set({ offer, participants: [callDocId] });
+
+            callDoc.onSnapshot(async snapshot => {
+                const data = snapshot.data();
+                if (data?.answer && !peerConnection.currentRemoteDescription) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                }
+            });
+
+            callDoc.collection("answerCandidates").onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        let candidate = new RTCIceCandidate(change.doc.data().candidate);
+                        peerConnection.addIceCandidate(candidate);
+                    }
+                });
+            });
+
+            updateUserList(callDocId);
+        }
+
+        async function joinCall() {
+            const callId = prompt("Enter Call ID:");
+            if (!callId) return;
+
+            const callDoc = db.collection("calls").doc(callId);
+            const offerCandidates = callDoc.collection("offerCandidates");
+            const answerCandidates = callDoc.collection("answerCandidates");
+
+            const callData = await callDoc.get();
+            if (!callData.exists) {
+                alert("Invalid Call ID!");
+                return;
+            }
+
+            const peerConnection = new RTCPeerConnection(servers);
+            peerConnections[callId] = peerConnection;
+
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    answerCandidates.add({ candidate: event.candidate.toJSON() });
+                }
+            };
+
+            peerConnection.ontrack = event => {
+                let video = addRemoteVideo(callId);
+                video.srcObject = event.streams[0];
+            };
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.data().offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            await callDoc.update({ answer, participants: firebase.firestore.FieldValue.arrayUnion(callId) });
+
+            offerCandidates.onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        let candidate = new RTCIceCandidate(change.doc.data().candidate);
+                        peerConnection.addIceCandidate(candidate);
+                    }
+                });
+            });
+
+            updateUserList(callId);
+        }
+
+        function hangUp() {
+            if (isHost) {
+                db.collection("calls").doc(callDocId).delete().then(() => {
+                    alert("Call ended for everyone.");
+                    window.location.href = "index.html";
+                });
+            } else {
+                alert("You have left the call.");
+                window.location.href = "index.html";
+            }
+        }
+
+        function updateUserList(callId) {
+            db.collection("calls").doc(callId).onSnapshot(snapshot => {
+                const participants = snapshot.data()?.participants || [];
+                userListItems.innerHTML = '';
+                participants.forEach(participantId => {
+                    let li = document.createElement("li");
+                    li.classList.add("user");
+                    li.textContent = participantId;
+                    userListItems.appendChild(li);
+                });
+            });
+        }
+
+        function toggleControls() {
+            controlsVisible = !controlsVisible;
+            const controls = document.getElementById("controls");
+            controls.style.display = controlsVisible ? 'block' : 'none';
+        }
+    </script>
+
+</body>
+</html>
