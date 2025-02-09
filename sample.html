@@ -181,66 +181,43 @@
         function addRemoteVideo(peerId) {
             let existingVideo = document.getElementById(peerId);
             if (existingVideo) return existingVideo;
-        
-            let videoContainer = document.createElement("div");
-            videoContainer.style.position = "relative";
-            videoContainer.style.display = "inline-block";
-            videoContainer.id = `container_${peerId}`;
-        
-            // Create the video element
+
             let video = document.createElement("video");
             video.id = peerId;
             video.autoplay = true;
             video.playsinline = true;
             video.classList.add("remote_video");
-            video.style.width = "200px";
-            video.style.height = "200px";
-        
-            // Mute/Unmute button
-            let muteButton = document.createElement("button");
-            muteButton.textContent = "🔇 Mute";
-            muteButton.style.position = "absolute";
-            muteButton.style.bottom = "10px";
-            muteButton.style.right = "10px";
-            muteButton.style.padding = "5px 10px";
-            muteButton.style.borderRadius = "5px";
-            muteButton.style.background = "rgba(0, 0, 0, 0.7)";
-            muteButton.style.color = "white";
-            muteButton.style.border = "none";
-            muteButton.style.cursor = "pointer";
-        
-            let isMuted = false;
-        
-            muteButton.addEventListener("click", () => {
-                let audioTrack = video.srcObject?.getAudioTracks()[0];
-                if (audioTrack) {
-                    isMuted = !isMuted;
-                    audioTrack.enabled = !isMuted;
-                    muteButton.textContent = isMuted ? "🔈 Unmute" : "🔇 Mute";
-                    console.log(`Audio for ${peerId} is now ${isMuted ? "muted" : "unmuted"}`);
-                } else {
-                    console.log(`No audio track found for ${peerId}`);
-                }
-            });
-        
-            // Handle video resize on click
-            video.addEventListener("dblclick", () => {
-                video.style.width = "500px";
-                video.style.height = "500px";
-            });
-        
-            video.addEventListener("click", () => {
-                video.style.width = "200px";
-                video.style.height = "200px";
-            });
-        
-            videoContainer.appendChild(video);
-            videoContainer.appendChild(muteButton);
-            remoteVideos.appendChild(videoContainer);
-        
-            return videoContainer;
+          
+           
+
+
+
+// Add event listener for double click (expand to 500x500)
+video.addEventListener("dblclick", () => {
+    video.style.width = "500px";
+    video.style.height = "500px";
+    video.classList.add("remote_video");
+});
+
+// Add event listener for single click (restore size)
+video.addEventListener("click", () => {
+    video.style.width = "200px";
+    video.style.height = "200px";
+    video.classList.add("remote_video");
+});
+
+
+
+
+
+
+
+            remoteVideos.appendChild(video);
+            return video;
         }
-        
+
+
+
 
 
         ///////////////////////////////////////////////
