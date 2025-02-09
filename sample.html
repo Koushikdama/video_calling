@@ -43,12 +43,34 @@
             overflow-x: auto;
             padding: 10px;
             gap: 10px;
+            
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         }
 
         @media screen and (max-width: 1024px) {
             #screenShareBtn {
                 display: none;
             }
+        }
+
+
+        .remote_video {
+            width: 200px;
+            height: 200px;
+            background: black;
+            border: 5px solid transparent;
+            border-radius: 10px;
+            transition: border 0.5s ease;
+        }
+        .shining-border {
+            animation: borderAnimation 2s infinite;
+        }
+        @keyframes borderAnimation {
+            0% { border-color: #ff0000; }
+            25% { border-color: #ff7300; }
+            50% { border-color: #ffeb00; }
+            75% { border-color: #47ff00; }
+            100% { border-color: #00f7ff; }
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-app-compat.js"></script>
@@ -71,6 +93,17 @@
         <button onclick="createCall()"><img src="./assets/video.png" style="height:20px;width:20px;"> Create Call</button>
         <button onclick="joinCall()"><img src="./assets/team.png" style="height:20px;width:20px;"> Join Call</button>
         <button onclick="hangUp()"><img src="./assets/hang-up.png" style="height:20px;width:20px;"> Hang Up</button>
+
+
+
+
+        <div>
+            <button id="startEffectBtn">Start Gradient Effect</button>
+            <button id="stopEffectBtn">Stop Gradient Effect</button>
+        </div>
+        
+
+
     </div>
 
     <button id="toggleControlsBtn" onclick="toggleControls()">🔽 Show/Hide Controls</button>
@@ -107,9 +140,12 @@
         let controlsVisible = true;
         var micro_phone = document.getElementById('mic_control');
         var video_access = document.getElementById('video_control');
+
+        const startEffectBtn = document.getElementById("startEffectBtn");
+        const stopEffectBtn = document.getElementById("stopEffectBtn");
       
               
-        async function startStream() {
+      /*  async function startStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 localVideo.srcObject = localStream;
@@ -117,43 +153,115 @@
                 alert("Camera & Mic access required!");
                 console.error("Media error:", error);
             }
+        } */
+        async function startStream() {
+            try {
+                const constraints = {
+                    video: true,
+                    audio: {
+                        echoCancellation: true,   // Reduce echo
+                        noiseSuppression: true,   // Suppress background noise
+                        autoGainControl: true,    // Maintain consistent volume
+                        sampleRate: 48000,        // High-quality audio sample rate
+                    }
+                };
+                
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                localVideo.srcObject = localStream;
+        
+                console.log("Stream started with optimized audio settings.");
+            } catch (error) {
+                alert("Camera & Mic access required!");
+                console.error("Media error:", error);
+            }
         }
-
+        
         startStream();
 
         function addRemoteVideo(peerId) {
             let existingVideo = document.getElementById(peerId);
             if (existingVideo) return existingVideo;
-
+        
+            let videoContainer = document.createElement("div");
+            videoContainer.style.position = "relative";
+            videoContainer.style.display = "inline-block";
+            videoContainer.id = `container_${peerId}`;
+        
+            // Create the video element
             let video = document.createElement("video");
             video.id = peerId;
             video.autoplay = true;
             video.playsinline = true;
-
-
-
-// Add event listener for double click (expand to 500x500)
-video.addEventListener("dblclick", () => {
-    video.style.width = "500px";
-    video.style.height = "500px";
-});
-
-// Add event listener for single click (restore size)
-video.addEventListener("click", () => {
-    video.style.width = "200px";
-    video.style.height = "200px";
-});
-
-
-
-
-
-
-
-            remoteVideos.appendChild(video);
-            return video;
+            video.classList.add("remote_video");
+            video.style.width = "200px";
+            video.style.height = "200px";
+        
+            // Mute/Unmute button
+            let muteButton = document.createElement("button");
+            muteButton.textContent = "🔇 Mute";
+            muteButton.style.position = "absolute";
+            muteButton.style.bottom = "10px";
+            muteButton.style.right = "10px";
+            muteButton.style.padding = "5px 10px";
+            muteButton.style.borderRadius = "5px";
+            muteButton.style.background = "rgba(0, 0, 0, 0.7)";
+            muteButton.style.color = "white";
+            muteButton.style.border = "none";
+            muteButton.style.cursor = "pointer";
+        
+            let isMuted = false;
+        
+            muteButton.addEventListener("click", () => {
+                let audioTrack = video.srcObject?.getAudioTracks()[0];
+                if (audioTrack) {
+                    isMuted = !isMuted;
+                    audioTrack.enabled = !isMuted;
+                    muteButton.textContent = isMuted ? "🔈 Unmute" : "🔇 Mute";
+                    console.log(`Audio for ${peerId} is now ${isMuted ? "muted" : "unmuted"}`);
+                } else {
+                    console.log(`No audio track found for ${peerId}`);
+                }
+            });
+        
+            // Handle video resize on click
+            video.addEventListener("dblclick", () => {
+                video.style.width = "500px";
+                video.style.height = "500px";
+            });
+        
+            video.addEventListener("click", () => {
+                video.style.width = "200px";
+                video.style.height = "200px";
+            });
+        
+            videoContainer.appendChild(video);
+            videoContainer.appendChild(muteButton);
+            remoteVideos.appendChild(videoContainer);
+        
+            return videoContainer;
         }
+        
 
+
+        ///////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        ////////////////////////////////////////////////
         function toggleMic() {
             let track = localStream.getAudioTracks()[0];
             track.enabled = !track.enabled;
@@ -345,6 +453,26 @@ video.addEventListener("click", () => {
             const controls = document.getElementById("controls");
             controls.style.display = controlsVisible ? 'block' : 'none';
         }
+
+        ////////////////////////////////////
+        // Add click event for the start effect button
+        startEffectBtn.addEventListener("click", () => {
+            const videos = document.querySelectorAll(".remote_video");
+            videos.forEach(video => {
+                video.classList.add("shining-border");
+            });
+        });
+        
+        stopEffectBtn.addEventListener("click", () => {
+            const videos = document.querySelectorAll(".remote_video");
+            videos.forEach(video => {
+                video.classList.remove("shining-border");
+            });
+        });
+        
+
+    // Simulate adding dynamic video elements
+  
     </script>
 
 </body>
