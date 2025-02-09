@@ -186,6 +186,10 @@
             video.id = peerId;
             video.autoplay = true;
             video.playsinline = true;
+            video.setAttribute("controls", "controls");
+            video.removeAttribute("muted");
+            video.muted = false;
+
             video.classList.add("remote_video");
           
            
