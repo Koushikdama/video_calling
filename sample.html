@@ -52,6 +52,11 @@
                 display: none;
             }
         }
+        @media screen and (max-width: 1024px) {
+            #switching_camera {
+                display: none;
+            }
+        }
 
 
         .remote_video {
@@ -93,7 +98,7 @@
         <button onclick="createCall()"><img src="./assets/video.png" style="height:20px;width:20px;"> Create Call</button>
         <button onclick="joinCall()"><img src="./assets/team.png" style="height:20px;width:20px;"> Join Call</button>
         <button onclick="hangUp()"><img src="./assets/hang-up.png" style="height:20px;width:20px;"> Hang Up</button>
-        <button onclick="switchCamera()">Switch Camera</button>
+        <button onclick="switchCamera()" id="switching_camera">Switch Camera</button>
 
 
 
