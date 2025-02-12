@@ -52,10 +52,8 @@
                 display: none;
             }
         }
-        @media screen and (max-width: 1024px) {
-            #switching_camera {
-                display: none;
-            }
+        #switching_camera {
+            display: none; /* Hide by default */
         }
 
 
@@ -129,6 +127,23 @@
             messagingSenderId: "173102596800",
             appId: "1:173102596800:web:e664cbd1cb8b7e8656e325"
         };
+
+
+
+
+
+function isMobileDevice() {
+            return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        }
+
+        window.onload = function () {
+            if (isMobileDevice()) {
+                document.getElementById('mobileButton').style.display = 'block';
+            }
+        };
+
+
+        
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
