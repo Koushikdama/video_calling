@@ -52,9 +52,20 @@
                 display: none;
             }
         }
-        #switching_camera {
-            display: none; /* Hide by default */
-        }
+      
+
+        /* Hide button by default */
+#switching_camera {
+    display: none;
+}
+
+/* Show button only on screens smaller than 768px (typical mobile screens) */
+@media screen and (max-width: 768px) {
+    #switching_camera {
+        display: block; /* or inline-block */
+    }
+}
+
 
 
         .remote_video {
@@ -132,15 +143,7 @@
 
 
 
-function isMobileDevice() {
-            return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        }
 
-        window.onload = function () {
-            if (isMobileDevice()) {
-                document.getElementById('mobileButton').style.display = 'block';
-            }
-        };
 
 
         
