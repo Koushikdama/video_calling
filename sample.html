@@ -93,6 +93,8 @@
         <button onclick="createCall()"><img src="./assets/video.png" style="height:20px;width:20px;"> Create Call</button>
         <button onclick="joinCall()"><img src="./assets/team.png" style="height:20px;width:20px;"> Join Call</button>
         <button onclick="hangUp()"><img src="./assets/hang-up.png" style="height:20px;width:20px;"> Hang Up</button>
+        <button onclick="switchCamera()">Switch Camera</button>
+
 
 
 
@@ -453,6 +455,41 @@ video.addEventListener("click", () => {
         
 
     // Simulate adding dynamic video elements
+
+
+
+
+    let currentFacingMode = "user"; // "user" for front camera, "environment" for back camera
+let videoElement = document.getElementById("localVideo");
+let stream;
+
+async function switchCamera() {
+    try {
+        // Stop the existing stream if any
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+
+        // Toggle camera mode
+        currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+
+        // Get media stream with the new facing mode
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacingMode },
+            audio: true
+        });
+
+        // Set the new stream to video element
+        videoElement.srcObject = stream;
+
+        console.log(`Switched to ${currentFacingMode} camera`);
+    } catch (error) {
+        console.error("Error switching camera:", error);
+    }
+}
+
+// Call switchCamera() when you want to toggle between front and back cameras
+
   
     </script>
 
